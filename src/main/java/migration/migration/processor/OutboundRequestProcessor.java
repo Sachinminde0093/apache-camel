@@ -4,11 +4,9 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Component
 public class OutboundRequestProcessor implements Processor {
 
     private static final Logger log =
@@ -17,32 +15,41 @@ public class OutboundRequestProcessor implements Processor {
     @Override
     public void process(Exchange exchange) {
 
-        String parentId =
-                exchange.getProperty("parentRequestId", String.class);
-
         AtomicInteger counter =
                 exchange.getProperty("childCounter", AtomicInteger.class);
 
-        int childNo = counter.incrementAndGet();
-        String childRequestId = parentId + "-" + childNo;
+        String parentId =
+                exchange.getProperty("parentRequestId", String.class);
 
-        exchange.setProperty("childRequestId", childRequestId);
+        String childId =
+                parentId + "-" + counter.incrementAndGet();
+
+        exchange.setProperty("childRequestId", childId);
+
+        // Dynamically get endpoint
+        String endpoint =
+                exchange.getProperty(Exchange.TO_ENDPOINT, String.class);
+
+        if (endpoint != null) {
+            endpoint = endpoint.split("\\?")[0];
+        }
 
         log.info("""
-                
                 ================= OUTBOUND REQUEST =================
                 RequestId : {}
                 MetaId    : {}
                 ExchangeId: {}
+                Method    : {}
                 URI       : {}
                 Headers   : {}
                 Payload   : {}
                 ====================================================
                 """,
-                childRequestId,
+                childId,
                 exchange.getProperty("metaId"),
                 exchange.getExchangeId(),
-                exchange.getProperty(Exchange.TO_ENDPOINT),
+                exchange.getIn().getHeader(Exchange.HTTP_METHOD),
+                endpoint,
                 exchange.getIn().getHeaders(),
                 exchange.getIn().getBody(String.class)
         );

@@ -4,9 +4,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
 public class FinalResponseProcessor implements Processor {
 
     private static final Logger log =
@@ -15,18 +13,21 @@ public class FinalResponseProcessor implements Processor {
     @Override
     public void process(Exchange exchange) {
 
-        Long startTime =
-                exchange.getProperty("startTime", Long.class);
+        Long start = exchange.getProperty("startTime", Long.class);
 
-        long timeTaken = startTime != null
-                ? System.currentTimeMillis() - startTime
+        long timeTaken = start != null
+                ? System.currentTimeMillis() - start
                 : 0;
 
+        Integer status = exchange.getMessage()
+                .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
+
         log.info("""
-                
                 ================= OUTBOUND RESPONSE =================
                 RequestId    : {}
                 MetaId       : {}
+                Method       : {}
+                URL          : {}
                 Status       : {}
                 TimeTaken(ms): {}
                 Payload      : {}
@@ -34,8 +35,9 @@ public class FinalResponseProcessor implements Processor {
                 """,
                 exchange.getProperty("parentRequestId"),
                 exchange.getProperty("metaId"),
-                exchange.getMessage()
-                        .getHeader(Exchange.HTTP_RESPONSE_CODE),
+                exchange.getProperty("originalMethod"),
+                exchange.getProperty("originalUrl"),
+                status,
                 timeTaken,
                 exchange.getMessage().getBody(String.class)
         );

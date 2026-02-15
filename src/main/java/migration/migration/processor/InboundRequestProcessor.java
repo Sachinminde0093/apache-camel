@@ -4,14 +4,12 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Component
 public class InboundRequestProcessor implements Processor {
 
     private static final Logger log =
@@ -20,12 +18,12 @@ public class InboundRequestProcessor implements Processor {
     @Override
     public void process(Exchange exchange) {
 
-        String parentRequestId = LocalDateTime.now()
+        String requestId = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
 
-        exchange.setProperty("parentRequestId", parentRequestId);
-        exchange.setProperty("childCounter", new AtomicInteger(0));
+        exchange.setProperty("parentRequestId", requestId);
         exchange.setProperty("metaId", UUID.randomUUID().toString());
+        exchange.setProperty("childCounter", new AtomicInteger(0));
         exchange.setProperty("startTime", System.currentTimeMillis());
 
         String method = exchange.getIn()
@@ -34,10 +32,10 @@ public class InboundRequestProcessor implements Processor {
         String url = exchange.getIn()
                 .getHeader(Exchange.HTTP_URL, String.class);
 
-        String body = exchange.getIn().getBody(String.class);
+        exchange.setProperty("originalMethod", method);
+        exchange.setProperty("originalUrl", url);
 
         log.info("""
-                
                 ================= INBOUND REQUEST =================
                 RequestId : {}
                 MetaId    : {}
@@ -47,12 +45,12 @@ public class InboundRequestProcessor implements Processor {
                 Payload   : {}
                 ====================================================
                 """,
-                parentRequestId,
+                requestId,
                 exchange.getProperty("metaId"),
                 method,
                 url,
                 exchange.getIn().getHeaders(),
-                body
+                exchange.getIn().getBody(String.class)
         );
     }
 }

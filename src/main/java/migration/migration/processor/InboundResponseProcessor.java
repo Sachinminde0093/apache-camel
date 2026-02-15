@@ -4,9 +4,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
 public class InboundResponseProcessor implements Processor {
 
     private static final Logger log =
@@ -15,8 +13,13 @@ public class InboundResponseProcessor implements Processor {
     @Override
     public void process(Exchange exchange) {
 
+        Integer status = exchange.getMessage()
+                .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
+
+        String body = exchange.getMessage()
+                .getBody(String.class);
+
         log.info("""
-                
                 ================= INBOUND RESPONSE =================
                 RequestId : {}
                 MetaId    : {}
@@ -29,10 +32,9 @@ public class InboundResponseProcessor implements Processor {
                 exchange.getProperty("childRequestId"),
                 exchange.getProperty("metaId"),
                 exchange.getExchangeId(),
-                exchange.getMessage()
-                        .getHeader(Exchange.HTTP_RESPONSE_CODE),
+                status,
                 exchange.getMessage().getHeaders(),
-                exchange.getMessage().getBody(String.class)
+                body
         );
     }
 }

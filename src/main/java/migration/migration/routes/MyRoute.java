@@ -364,7 +364,7 @@
 
 package migration.migration.routes;
 
-import migration.migration.processor.AuthenticationProcessor;
+import migration.migration.processor.*;
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
@@ -372,13 +372,35 @@ import org.springframework.stereotype.Component;
 public class MyRoute extends BaseRoute {
 
     private final AuthenticationProcessor authenticationProcessor;
+    private final InboundRequestProcessor inboundRequestProcessor;
+    private final OutboundRequestProcessor outboundRequestProcessor;
+    private final FinalResponseProcessor finalResponseProcessor;
+    private final InboundResponseProcessor inboundResponseProcessor;
 
     public MyRoute(AuthenticationProcessor authenticationProcessor) {
         this.authenticationProcessor = authenticationProcessor;
+        this.inboundRequestProcessor = new InboundRequestProcessor();
+        this.outboundRequestProcessor = new OutboundRequestProcessor();
+        this.finalResponseProcessor = new FinalResponseProcessor();
+        this.inboundResponseProcessor = new InboundResponseProcessor();
     }
 
     @Override
     protected void configureRoutes() {
+
+        rest("/employee")
+                .get()
+                .to("direct:getEmployee");
+
+        from("direct:getEmployee")
+                .routeId("get-test-route")
+                .process(inboundRequestProcessor)
+                .process(outboundRequestProcessor)
+                .toD("http://localhost:8081/employee"
+                        + "?bridgeEndpoint=true"
+                        + "&throwExceptionOnFailure=true")
+                .process(inboundResponseProcessor)
+                .process(finalResponseProcessor);
 
         rest("/employee")
                 .post()
@@ -386,9 +408,13 @@ public class MyRoute extends BaseRoute {
 
         from("direct:createEmployee")
                 .routeId("create-test-route")
+                .process(inboundRequestProcessor)
                 .process(authenticationProcessor)
+                .process(outboundRequestProcessor)
                 .toD("http://localhost:8081/employee"
                         + "?bridgeEndpoint=true"
-                        + "&throwExceptionOnFailure=true");
+                        + "&throwExceptionOnFailure=true")
+                .process(inboundResponseProcessor)
+                .process(finalResponseProcessor);
     }
 }
