@@ -19,7 +19,7 @@ public abstract class BaseRoute extends RouteBuilder {
 
         /*
          =====================================================
-                CUSTOM API EXCEPTIONS (401, 400 etc.)
+                CUSTOM API EXCEPTIONS
          =====================================================
          */
         onException(ApiException.class)
@@ -111,28 +111,19 @@ public abstract class BaseRoute extends RouteBuilder {
 
         /*
          =====================================================
-              1️⃣ CLIENT → YOUR API (INBOUND REQUEST)
+              1️⃣ INBOUND REQUEST
          =====================================================
          */
         interceptFrom()
                 .process(exchange -> {
 
-                    // Parent Request ID
                     String parentRequestId = LocalDateTime.now()
                             .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
 
                     exchange.setProperty("parentRequestId", parentRequestId);
-
-                    // Child counter
-                    exchange.setProperty("childCounter",
-                            new AtomicInteger(0));
-
-                    // MetaId (UUID)
-                    String metaId = UUID.randomUUID().toString();
-                    exchange.setProperty("metaId", metaId);
-
-                    exchange.setProperty("startTime",
-                            System.currentTimeMillis());
+                    exchange.setProperty("childCounter", new AtomicInteger(0));
+                    exchange.setProperty("metaId", UUID.randomUUID().toString());
+                    exchange.setProperty("startTime", System.currentTimeMillis());
 
                     String method = exchange.getIn()
                             .getHeader(Exchange.HTTP_METHOD, String.class);
@@ -143,11 +134,7 @@ public abstract class BaseRoute extends RouteBuilder {
                     exchange.setProperty("originalMethod", method);
                     exchange.setProperty("originalUrl", url);
 
-                    String headers = exchange.getIn().getHeaders().toString();
-                    String body = exchange.getIn().getBody(String.class);
-
                     log.info("""
-
                             ================= INBOUND REQUEST =================
                             RequestId : {}
                             MetaId    : {}
@@ -158,14 +145,13 @@ public abstract class BaseRoute extends RouteBuilder {
                             ====================================================
                             """,
                             parentRequestId,
-                            metaId,
+                            exchange.getProperty("metaId"),
                             method,
                             url,
-                            headers,
-                            body
+                            exchange.getIn().getHeaders(),
+                            exchange.getIn().getBody(String.class)
                     );
                 });
-
 
         /*
          =====================================================
@@ -181,30 +167,26 @@ public abstract class BaseRoute extends RouteBuilder {
                     AtomicInteger counter =
                             exchange.getProperty("childCounter", AtomicInteger.class);
 
-                    int childNo = counter.incrementAndGet();
-                    String childRequestId = parentId + "-" + childNo;
+                    String childRequestId =
+                            parentId + "-" + counter.incrementAndGet();
 
                     exchange.setProperty("childRequestId", childRequestId);
 
-                    String metaId =
-                            exchange.getProperty("metaId", String.class);
-
-                    String exchangeId = exchange.getExchangeId();
-
-                    String method =
-                            exchange.getIn().getHeader(Exchange.HTTP_METHOD, String.class);
-
-                    String uri =
+                    String baseUri =
                             exchange.getProperty(Exchange.TO_ENDPOINT, String.class);
 
-                    String headers =
-                            exchange.getIn().getHeaders().toString();
+                    String path =
+                            exchange.getIn().getHeader(Exchange.HTTP_PATH, String.class);
 
-                    String body =
-                            exchange.getIn().getBody(String.class);
+                    String uri = baseUri != null
+                            ? baseUri.split("\\?")[0]
+                            : "";
+
+                    if (path != null && !uri.endsWith(path)) {
+                        uri = uri + path;
+                    }
 
                     log.info("""
-
                             ================= OUTBOUND REQUEST =================
                             RequestId : {}
                             MetaId    : {}
@@ -216,40 +198,25 @@ public abstract class BaseRoute extends RouteBuilder {
                             ====================================================
                             """,
                             childRequestId,
-                            metaId,
-                            exchangeId,
-                            method,
+                            exchange.getProperty("metaId"),
+                            exchange.getExchangeId(),
+                            exchange.getIn().getHeader(Exchange.HTTP_METHOD),
                             uri,
-                            headers,
-                            body
+                            exchange.getIn().getHeaders(),
+                            exchange.getIn().getBody(String.class)
                     );
                 })
                 .process(exchange -> {
 
-                    /*
-                       This runs AFTER HTTP call completes
-                     */
+                    Integer status = exchange.getMessage()
+                            .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
 
-                    String childRequestId =
-                            exchange.getProperty("childRequestId", String.class);
-
-                    String metaId =
-                            exchange.getProperty("metaId", String.class);
-
-                    String exchangeId = exchange.getExchangeId();
-
-                    Integer status =
-                            exchange.getMessage()
-                                    .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
-
-                    String headers =
-                            exchange.getMessage().getHeaders().toString();
-
-                    String body =
-                            exchange.getMessage().getBody(String.class);
+                    if (status == null) {
+                        status = exchange.getIn()
+                                .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
+                    }
 
                     log.info("""
-
                             ================= INBOUND RESPONSE =================
                             RequestId : {}
                             MetaId    : {}
@@ -259,52 +226,32 @@ public abstract class BaseRoute extends RouteBuilder {
                             Payload   : {}
                             ====================================================
                             """,
-                            childRequestId,
-                            metaId,
-                            exchangeId,
+                            exchange.getProperty("childRequestId"),
+                            exchange.getProperty("metaId"),
+                            exchange.getExchangeId(),
                             status,
-                            headers,
-                            body
+                            exchange.getMessage().getHeaders(),
+                            exchange.getMessage().getBody(String.class)
                     );
                 });
 
-
         /*
          =====================================================
-              4️⃣ FINAL RESPONSE TO CLIENT
+              4️⃣ FINAL RESPONSE
          =====================================================
          */
         onCompletion()
                 .process(exchange -> {
 
-                    String parentRequestId =
-                            exchange.getProperty("parentRequestId", String.class);
-
-                    String metaId =
-                            exchange.getProperty("metaId", String.class);
-
-                    String method =
-                            exchange.getProperty("originalMethod", String.class);
-
-                    String url =
-                            exchange.getProperty("originalUrl", String.class);
-
-                    Integer status =
-                            exchange.getMessage()
-                                    .getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
-
-                    String body =
-                            exchange.getMessage().getBody(String.class);
-
-                    Long startTime =
+                    Long start =
                             exchange.getProperty("startTime", Long.class);
 
-                    long timeTaken = startTime != null
-                            ? System.currentTimeMillis() - startTime
-                            : 0;
+                    long timeTaken =
+                            start != null
+                                    ? System.currentTimeMillis() - start
+                                    : 0;
 
                     log.info("""
-
                             ================= OUTBOUND RESPONSE =================
                             RequestId    : {}
                             MetaId       : {}
@@ -315,20 +262,18 @@ public abstract class BaseRoute extends RouteBuilder {
                             Payload      : {}
                             ====================================================
                             """,
-                            parentRequestId,
-                            metaId,
-                            method,
-                            url,
-                            status,
+                            exchange.getProperty("parentRequestId"),
+                            exchange.getProperty("metaId"),
+                            exchange.getProperty("originalMethod"),
+                            exchange.getProperty("originalUrl"),
+                            exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE),
                             timeTaken,
-                            body
+                            exchange.getMessage().getBody(String.class)
                     );
                 });
 
-        // 🔥 Important: allow subclasses to define routes
         configureRoutes();
     }
 
-    // Subclasses will implement this
     protected abstract void configureRoutes() throws Exception;
 }
