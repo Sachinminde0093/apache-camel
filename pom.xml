@@ -70,6 +70,12 @@
             <artifactId>camel-http-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-jackson-starter</artifactId>
+        </dependency>
+
+
         <!-- JMS (Optional - keep if needed) -->
         <dependency>
             <groupId>org.apache.camel.springboot</groupId>
