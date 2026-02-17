@@ -1,10 +1,10 @@
 package migration.migration.exception;
 
-public class ApiException extends RuntimeException {
+public class ServiceException extends RuntimeException {
 
     private final int status;
 
-    public ApiException(String message, int status) {
+    public ServiceException(String message, int status) {
         super(message);
         this.status = status;
     }

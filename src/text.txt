@@ -1,0 +1,79 @@
+dynamic loading
+
+1)
+
+spring.config.import=optional:file:/opt/config/config1.properties
+
+
+2)
+On each server:
+
+/opt/config/application.properties
+
+
+Then start with:
+
+java -jar migration.jar \
+--spring.config.location=file:/opt/config/
+
+
+
+3)
+
+java -jar migration.jar \
+--spring.config.location=file:/opt/config/config1.properties
+
+
+4)
+
+Server 1
+java -jar migration.jar \
+--spring.config.import=optional:file:/opt/config/config1.properties
+
+Server 2
+java -jar migration.jar \
+--spring.config.import=optional:file:/opt/config/config2.properties
+
+
+package migration.migration.config;
+
+import org.apache.camel.spi.UuidGenerator;
+
+import java.util.UUID;
+
+public class CustomUuidGenerator implements UuidGenerator {
+
+    @Override
+    public String generateUuid() {
+
+        // Example: shorter UUID
+        return "EX-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+}
+
+
+package migration.migration.config;
+
+import org.apache.camel.CamelContext;
+import org.apache.camel.spring.boot.CamelContextConfiguration;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class CamelConfig {
+
+    @Bean
+    public CamelContextConfiguration contextConfiguration() {
+        return new CamelContextConfiguration() {
+
+            @Override
+            public void beforeApplicationStart(CamelContext camelContext) {
+                camelContext.setUuidGenerator(new CustomUuidGenerator());
+            }
+
+            @Override
+            public void afterApplicationStart(CamelContext camelContext) {
+                // nothing
+            }
+        };
+    }
+}

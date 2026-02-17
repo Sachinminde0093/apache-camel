@@ -1,6 +1,6 @@
 package migration.migration.exception;
 
-public class UnauthorizedException extends ApiException {
+public class UnauthorizedException extends ServiceException {
 
     public UnauthorizedException(String message) {
         super(message, 401);
