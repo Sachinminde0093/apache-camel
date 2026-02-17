@@ -395,12 +395,20 @@ public class MyRoute extends BaseRoute {
         from("direct:getEmployee")
                 .routeId("get-test-route")
                 .process(inboundRequestProcessor)
+                .removeHeader(Exchange.HTTP_PATH)
+                .removeHeader(Exchange.HTTP_URI)
+                .removeHeader(Exchange.HTTP_URL)
+                .setProperty("downstreamUrl",
+                        constant("http://localhost:8081/employee"))
                 .process(outboundRequestProcessor)
-                .toD("http://localhost:8081/employee"
+                .toD("${exchangeProperty.downstreamUrl}"
                         + "?bridgeEndpoint=true"
-                        + "&throwExceptionOnFailure=true")
+                        + "&throwExceptionOnFailure=false")
                 .process(inboundResponseProcessor)
                 .process(finalResponseProcessor);
+
+
+
 
         rest("/employee")
                 .post()
@@ -409,11 +417,22 @@ public class MyRoute extends BaseRoute {
         from("direct:createEmployee")
                 .routeId("create-test-route")
                 .process(inboundRequestProcessor)
-                .process(authenticationProcessor)
+                .removeHeader(Exchange.HTTP_PATH)
+                .removeHeader(Exchange.HTTP_URI)
+                .removeHeader(Exchange.HTTP_URL)
+                .setProperty("downstreamUrl",
+                        constant("http://localhost:8081/employee"))
                 .process(outboundRequestProcessor)
-                .toD("http://localhost:8081/employee"
+                .toD("${exchangeProperty.downstreamUrl}"
                         + "?bridgeEndpoint=true"
-                        + "&throwExceptionOnFailure=true")
+                        + "&throwExceptionOnFailure=false")
+                .process(inboundResponseProcessor)
+                .setProperty("downstreamUrl",
+                        constant("http://localhost:8082/employee"))
+                .process(outboundRequestProcessor)
+                .toD("${exchangeProperty.downstreamUrl}"
+                        + "?bridgeEndpoint=true"
+                        + "&throwExceptionOnFailure=false")
                 .process(inboundResponseProcessor)
                 .process(finalResponseProcessor);
     }

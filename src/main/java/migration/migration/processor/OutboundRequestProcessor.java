@@ -26,13 +26,8 @@ public class OutboundRequestProcessor implements Processor {
 
         exchange.setProperty("childRequestId", childId);
 
-        // Dynamically get endpoint
-        String endpoint =
-                exchange.getProperty(Exchange.TO_ENDPOINT, String.class);
-
-        if (endpoint != null) {
-            endpoint = endpoint.split("\\?")[0];
-        }
+        String downstreamUrl =
+                exchange.getProperty("downstreamUrl", String.class);
 
         log.info("""
                 ================= OUTBOUND REQUEST =================
@@ -49,7 +44,7 @@ public class OutboundRequestProcessor implements Processor {
                 exchange.getProperty("metaId"),
                 exchange.getExchangeId(),
                 exchange.getIn().getHeader(Exchange.HTTP_METHOD),
-                endpoint,
+                downstreamUrl,
                 exchange.getIn().getHeaders(),
                 exchange.getIn().getBody(String.class)
         );

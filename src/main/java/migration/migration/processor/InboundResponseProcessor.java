@@ -19,11 +19,15 @@ public class InboundResponseProcessor implements Processor {
         String body = exchange.getMessage()
                 .getBody(String.class);
 
+        String downstreamUrl =
+                exchange.getProperty("downstreamUrl", String.class);
+
         log.info("""
                 ================= INBOUND RESPONSE =================
                 RequestId : {}
                 MetaId    : {}
                 ExchangeId: {}
+                URI       : {}
                 Status    : {}
                 Headers   : {}
                 Payload   : {}
@@ -32,6 +36,7 @@ public class InboundResponseProcessor implements Processor {
                 exchange.getProperty("childRequestId"),
                 exchange.getProperty("metaId"),
                 exchange.getExchangeId(),
+                downstreamUrl,
                 status,
                 exchange.getMessage().getHeaders(),
                 body
