@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Camel API Tester</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .header {
+            background: #173b57;
+            color: white;
+            padding: 20px 30px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .request-line {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        select,
+        input,
+        textarea {
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        select {
+            width: 120px;
+        }
+
+        #url {
+            flex: 1;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 220px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        button {
+            border: none;
+            border-radius: 4px;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .execute {
+            background: #49cc90;
+            color: white;
+            font-weight: bold;
+        }
+
+        .add {
+            background: #eeeeee;
+            color: #333;
+        }
+
+        .remove {
+            background: #ff5f5f;
+            color: white;
+            padding: 7px 12px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .row input {
+            flex: 1;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .response {
+            background: #1e1e1e;
+            color: #eee;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            min-height: 100px;
+            font-family: monospace;
+        }
+
+        .status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .hint {
+            color: #777;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="header">
+    Camel API Tester
+</div>
+
+<div class="container">
+
+    <!-- REQUEST -->
+
+    <div class="card">
+
+        <div class="title">
+            Request
+        </div>
+
+        <div class="request-line">
+
+            <select id="method">
+
+                <option value="GET">
+                    GET
+                </option>
+
+                <option value="POST">
+                    POST
+                </option>
+
+                <option value="PUT">
+                    PUT
+                </option>
+
+                <option value="DELETE">
+                    DELETE
+                </option>
+
+                <option value="PATCH">
+                    PATCH
+                </option>
+
+            </select>
+
+            <input
+                    id="url"
+                    type="text"
+                    value="/api/test"
+                    placeholder="Enter URL"
+            />
+
+        </div>
+
+
+        <!-- QUERY PARAMS -->
+
+        <div class="section">
+
+            <div class="section-header">
+
+                <div class="title">
+                    Query Parameters
+                </div>
+
+                <button
+                        class="add"
+                        onclick="addParameter()">
+                    + Add Parameter
+                </button>
+
+            </div>
+
+            <div id="parameters"></div>
+
+            <div class="hint">
+                Add any query parameter. The application does not need
+                to know the parameter name beforehand.
+            </div>
+
+        </div>
+
+
+        <!-- HEADERS -->
+
+        <div class="section">
+
+            <div class="section-header">
+
+                <div class="title">
+                    Headers
+                </div>
+
+                <button
+                        class="add"
+                        onclick="addHeader()">
+                    + Add Header
+                </button>
+
+            </div>
+
+            <div id="headers"></div>
+
+        </div>
+
+
+        <!-- BODY -->
+
+        <div class="section">
+
+            <div class="title">
+                Request Body
+            </div>
+
+            <textarea
+                    id="body"
+                    placeholder='{
+  "employeeId": "123",
+  "name": "Sachin"
+}'></textarea>
+
+            <div class="hint">
+                You can enter any JSON, XML, text, form data, etc.
+            </div>
+
+        </div>
+
+
+        <br>
+
+        <button
+                class="execute"
+                onclick="executeRequest()">
+            Execute
+        </button>
+
+    </div>
+
+
+    <!-- RESPONSE -->
+
+    <div class="card">
+
+        <div class="title">
+            Response
+        </div>
+
+        <div
+                id="status"
+                class="status">
+        </div>
+
+        <div
+                id="response"
+                class="response">
+            Execute a request to see the response.
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    /*
+     * =====================================================
+     * ADD QUERY PARAMETER
+     * =====================================================
+     */
+
+    function addParameter(key = "", value = "") {
+
+        const container =
+            document.getElementById("parameters");
+
+        const row =
+            document.createElement("div");
+
+        row.className = "row";
+
+        row.innerHTML = `
+            <input
+                type="text"
+                placeholder="Parameter name"
+                class="param-key"
+                value="${escapeHtml(key)}">
+
+            <input
+                type="text"
+                placeholder="Parameter value"
+                class="param-value"
+                value="${escapeHtml(value)}">
+
+            <button
+                class="remove"
+                onclick="this.parentElement.remove()">
+                X
+            </button>
+        `;
+
+        container.appendChild(row);
+    }
+
+
+    /*
+     * =====================================================
+     * ADD HEADER
+     * =====================================================
+     */
+
+    function addHeader(key = "", value = "") {
+
+        const container =
+            document.getElementById("headers");
+
+        const row =
+            document.createElement("div");
+
+        row.className = "row";
+
+        row.innerHTML = `
+            <input
+                type="text"
+                placeholder="Header name"
+                class="header-key"
+                value="${escapeHtml(key)}">
+
+            <input
+                type="text"
+                placeholder="Header value"
+                class="header-value"
+                value="${escapeHtml(value)}">
+
+            <button
+                class="remove"
+                onclick="this.parentElement.remove()">
+                X
+            </button>
+        `;
+
+        container.appendChild(row);
+    }
+
+
+    /*
+     * =====================================================
+     * EXECUTE REQUEST
+     * =====================================================
+     */
+
+    async function executeRequest() {
+
+        const method =
+            document.getElementById("method").value;
+
+        let url =
+            document.getElementById("url").value.trim();
+
+        if (!url) {
+
+            alert("Please enter URL");
+
+            return;
+        }
+
+
+        /*
+         * BUILD QUERY PARAMETERS
+         */
+
+        const queryParams =
+            document.querySelectorAll("#parameters .row");
+
+        const params =
+            new URLSearchParams();
+
+
+        queryParams.forEach(row => {
+
+            const key =
+                row.querySelector(".param-key").value.trim();
+
+            const value =
+                row.querySelector(".param-value").value;
+
+            if (key) {
+
+                params.append(key, value);
+
+            }
+
+        });
+
+
+        const queryString =
+            params.toString();
+
+
+        if (queryString) {
+
+            url +=
+                (url.includes("?") ? "&" : "?")
+                + queryString;
+
+        }
+
+
+        /*
+         * BUILD HEADERS
+         */
+
+        const headerRows =
+            document.querySelectorAll("#headers .row");
+
+        const headers = {};
+
+
+        headerRows.forEach(row => {
+
+            const key =
+                row.querySelector(".header-key").value.trim();
+
+            const value =
+                row.querySelector(".header-value").value;
+
+            if (key) {
+
+                headers[key] = value;
+
+            }
+
+        });
+
+
+        /*
+         * REQUEST BODY
+         */
+
+        const body =
+            document.getElementById("body").value;
+
+
+        const options = {
+
+            method: method,
+
+            headers: headers
+
+        };
+
+
+        if (
+            method !== "GET"
+            && method !== "HEAD"
+            && body.trim() !== ""
+        ) {
+
+            options.body = body;
+
+        }
+
+
+        /*
+         * SEND REQUEST
+         */
+
+        const statusElement =
+            document.getElementById("status");
+
+        const responseElement =
+            document.getElementById("response");
+
+
+        statusElement.innerText =
+            "Calling API...";
+
+        responseElement.innerText =
+            "";
+
+
+        try {
+
+            const response =
+                await fetch(url, options);
+
+
+            const responseText =
+                await response.text();
+
+
+            statusElement.innerText =
+                "HTTP " + response.status;
+
+
+            /*
+             * Try to format JSON
+             */
+
+            try {
+
+                const json =
+                    JSON.parse(responseText);
+
+                responseElement.innerText =
+                    JSON.stringify(
+                        json,
+                        null,
+                        2
+                    );
+
+            } catch (e) {
+
+                responseElement.innerText =
+                    responseText;
+
+            }
+
+
+        } catch (error) {
+
+            statusElement.innerText =
+                "Request failed";
+
+            responseElement.innerText =
+                error.toString();
+
+        }
+
+    }
+
+
+    /*
+     * =====================================================
+     * ESCAPE HTML
+     * =====================================================
+     */
+
+    function escapeHtml(value) {
+
+        return value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    /*
+     * ADD ONE EMPTY PARAMETER BY DEFAULT
+     */
+
+    addParameter();
+
+</script>
+
+</body>
+
+</html>
